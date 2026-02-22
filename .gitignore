@@ -1,0 +1,30 @@
+*.user
+*.user.*
+
+build/
+build-*/
+debug/
+release/
+
+# Arquivos de interface
+ui_*.h
+
+# Meta-Object Compiler
+moc_*.cpp
+*.moc
+
+# Recursos
+qrc_*.cpp
+
+# Pré-compilados
+*.gch
+*.pch
+
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.exe
+*.app
