@@ -54,6 +54,50 @@ void WaterMonitor::updateSensor()
     if (networkPressure > 100)
         networkPressure = 100;
 
+    updateStatus();
+}
+
+void WaterMonitor::updateStatus()
+{
+    // mantém estado atual até acabar o tempo mínimo
+    if (statusDurationRemaining > 0) {
+        statusDurationRemaining--;
+        return;
+    }
+
+    QString newStatus;
+
+    if (networkPressure < 10)
+        newStatus = "Interrupção";
+    else if (networkPressure < 40)
+        newStatus = "Escassez";
+    else
+        newStatus = "Normal";
+
+    // se mudou o estado, define duração mínima
+    if (newStatus != currentStatus)
+    {
+        currentStatus = newStatus;
+
+        if (newStatus == "Interrupção")
+            statusDurationRemaining = 10;
+
+        else if (newStatus == "Escassez")
+            statusDurationRemaining = 8;
+
+        else
+            statusDurationRemaining = 5;
+    }
+}
+
+QString WaterMonitor::getCurrentStatus() const
+{
+    return currentStatus;
+}
+
+void WaterMonitor::setCurrentStatus(const QString &newCurrentStatus)
+{
+    currentStatus = newCurrentStatus;
 }
 
 double WaterMonitor::getCurrentFlow()
@@ -61,6 +105,10 @@ double WaterMonitor::getCurrentFlow()
     return currentUsage;
 }
 
+QString WaterMonitor::getWaterStatus()
+{
+    return currentStatus;
+}
 
 bool WaterMonitor::checkAlerts()
 {
@@ -81,6 +129,9 @@ void WaterMonitor::forcePressure(double pressure){
     networkPressure = pressure;
 }
 
+void WaterMonitor::setStatusDurationRemaining(int x){
+    statusDurationRemaining = x;
+}
 void WaterMonitor::addConsumption(double x){
     totalConsumedLiters += x;
 }
