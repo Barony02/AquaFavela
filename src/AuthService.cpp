@@ -1,20 +1,44 @@
 #include "AuthService.h"
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
 
 AuthService::AuthService() {}
 
-User AuthService::authenticate(const QString &username, const QString &password) {
-    // Simulação de banco de dados para o AquaFavela
-    if (username == "admin" && password == "admin") {
-        return User(username, UserRole::Administrador, "Admin do Sistema", 0.0, 0.0);
+// Alterado para retornar o objeto User diretamente, facilitando o uso no Dialog
+User AuthService::authenticate(const QString& username, const QString& password) {
+    User loggedUser;
+    QSqlQuery query;
+
+    // Selecionando todas as colunas definidas no DatabaseManager
+    query.prepare(
+        "SELECT username, password, role, name, maxMonthlyConsumptionGoal, maxLitersPerMinuteGoal, totalConsumedLiters "
+        "FROM users "
+        "WHERE username = :username AND password = :password"
+        );
+
+    query.bindValue(":username", username);
+    query.bindValue(":password", password);
+
+    if (!query.exec()) {
+        qDebug() << "Erro SQL:" << query.lastError().text();
+        return loggedUser; // Retorna User com Role::None
     }
 
-    if (username == "gestor" && password == "123") {
-        return User(username, UserRole::Gestor, "Gestor da Rede", 0.0, 0.0);
+    if (query.next()) {
+        // Usando os métodos setter para contornar o erro de "protected"
+        loggedUser.setUsername(query.value("username").toString());
+        loggedUser.setPassword(query.value("password").toString());
+        loggedUser.setName(query.value("name").toString());
+
+        int roleInt = query.value("role").toInt();
+        loggedUser.setRole(static_cast<UserRole>(roleInt));
+
+        loggedUser.setMaxMonthlyConsumptionGoal(query.value("maxMonthlyConsumptionGoal").toDouble());
+        loggedUser.setMaxLitersPerMinuteGoal(query.value("maxLitersPerMinuteGoal").toDouble());
     }
 
-    if (username == "morador" && password == "123") {
-        return User(username, UserRole::Morador, "Morador da Silva", 18000.0, 9.0);
-    }
+    loggedUser.setTotalConsumedLiters(query.value("totalConsumedLiters").toDouble());
 
-    return User();
+    return loggedUser;
 }

@@ -1,9 +1,12 @@
 #include "mainwindow.h"
 #include "LoginDialog.h"
 #include <QApplication>
+#include "DatabaseManager.h"
 
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
+
+    DatabaseManager::initialize();
 
     // 1. Exibe Tela de Login
     LoginDialog login;
