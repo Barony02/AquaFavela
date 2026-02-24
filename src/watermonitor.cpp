@@ -43,8 +43,7 @@ void WaterMonitor::updateSensor()
     totalConsumedLiters += currentUsage * (2/60.0);
 
     // variação lenta da pressão (-2 a +2)
-    double pressureVariation =
-        (QRandomGenerator::global()->generateDouble() * 4.0) - 2.0;
+    double pressureVariation = (QRandomGenerator::global()->generateDouble() * 4.0) - 2.0;
 
     networkPressure += pressureVariation;
 
@@ -88,6 +87,16 @@ void WaterMonitor::updateStatus()
         else
             statusDurationRemaining = 5;
     }
+}
+
+double WaterMonitor::getCurrentUsage() const
+{
+    return currentUsage;
+}
+
+void WaterMonitor::setCurrentUsage(double newCurrentUsage)
+{
+    currentUsage = newCurrentUsage;
 }
 
 QString WaterMonitor::getCurrentStatus() const

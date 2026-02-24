@@ -50,6 +50,26 @@ void User::setMaxLitersPerMinuteGoal(double newMaxLitersPerMinuteGoal)
     maxLitersPerMinuteGoal = newMaxLitersPerMinuteGoal;
 }
 
+QString User::getPassword() const
+{
+    return password;
+}
+
+void User::setPassword(const QString &newPassword)
+{
+    password = newPassword;
+}
+
+double User::getTotalConsumedLiters() const
+{
+    return totalConsumedLiters;
+}
+
+void User::setTotalConsumedLiters(double newTotalConsumedLiters)
+{
+    totalConsumedLiters = newTotalConsumedLiters;
+}
+
 User::User(const QString &username, UserRole role, const QString &name, double maxMonthlyConsumptionGoal, double maxLitersPerMinuteGoal) : username(username),
     role(role),
     name(name),
