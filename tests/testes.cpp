@@ -1,8 +1,13 @@
 #include <QtTest>
 #include <QLabel>
+#include <QSqlQuery>
+#include <QSqlError>
 #include "watermonitor.h"
 #include "mainwindow.h"
+#include "ConsumptionService.h"
 #include "User.h"
+#include "DatabaseManager.h"
+#include "AuthService.h"
 
 class TestSistemaAgua : public QObject
 {
@@ -10,8 +15,62 @@ class TestSistemaAgua : public QObject
 
 private slots:
 
+    /**
+     * @brief Configura a conexão com o banco de dados antes dos testes.
+     * Garante que o driver SQLite está carregado e o arquivo aberto.
+     */
+    void initTestCase() {
+        QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+        db.setDatabaseName("AquaFavela.db");
 
+        if (!db.open()) {
+            QFAIL("Nao foi possivel abrir o banco de dados.");
+        }
+
+        QSqlQuery query;
+        // Criação da tabela com a estrutura completa
+        query.exec(
+            "CREATE TABLE IF NOT EXISTS users ("
+            "username TEXT PRIMARY KEY,"
+            "password TEXT NOT NULL,"
+            "role INTEGER NOT NULL,"
+            "name TEXT,"
+            "maxMonthlyConsumptionGoal REAL,"
+            "maxLitersPerMinuteGoal REAL,"
+            "totalConsumedLiters REAL DEFAULT 0.0"
+            ");"
+            );
+
+        // Limpa o usuário de teste para evitar erro de PRIMARY KEY
+        query.prepare("DELETE FROM users WHERE username = :u");
+        query.bindValue(":u", "gabriel_teste");
+        query.exec();
+
+        // INSERT especificando as colunas (Mais robusto para a Sprint 3)
+        query.prepare("INSERT INTO users (username, password, role, name, "
+                      "maxMonthlyConsumptionGoal, maxLitersPerMinuteGoal, totalConsumedLiters) "
+                      "VALUES (:u, :p, :r, :n, :maxM, :maxL, :total)");
+
+        query.bindValue(":u", "gabriel_teste");
+        query.bindValue(":p", "123");              // Senha
+        query.bindValue(":r", 1);                  // Role (Morador)
+        query.bindValue(":n", "Gabriel");          // Nome
+        query.bindValue(":maxM", 100.0);           // Meta mensal
+        query.bindValue(":maxL", 20.0);            // Meta L/min
+        query.bindValue(":total", 0.0);            // Consumo inicial
+
+        if (!query.exec()) {
+            QFAIL(qPrintable("Falha ao inserir usuario de teste: " + query.lastError().text()));
+        }
+    }
+    void cleanupTestCase() {
+        QSqlDatabase::removeDatabase(QSqlDatabase::defaultConnection);
+    }
+
+
+    // ================================
     // CENÁRIO 1 – Registrar consumo
+    // ================================
     void testRegistrarConsumo()
     {
         WaterMonitor monitor;
@@ -29,8 +88,9 @@ private slots:
         QCOMPARE(monitor.getTotalConsumedLiters(), 30.0);
     }
 
-
+    // ==========================================
     // CENÁRIO 2 – Registrar Status Abastecimento
+    // ==========================================
     void testRegistrarStatus()
     {
         WaterMonitor monitor;
@@ -69,8 +129,9 @@ private slots:
 
     }
 
-
+    // ==========================================
     // CENÁRIO 3 – Gerar alerta por limite
+    // ==========================================
     void testAlertaConsumoExcessivo()
     {
         User user;
@@ -108,8 +169,9 @@ private slots:
         QCOMPARE(label->text(), QString(""));
     }
 
-
+    // ==========================================
     // CENÁRIO 4 – Alerta por escassez
+    // ==========================================
     void testEscassezDetectada()
     {
         User user;
@@ -152,8 +214,9 @@ private slots:
         QCOMPARE(label->text(), QString("ALERTA CRÍTICO: Abastecimento Interrompido!"));
     }
 
-
+    // ==========================================
     // CENÁRIO 5 – Exibição na interface
+    // ==========================================
     void testExibicaoInterface()
     {
         User user;
@@ -184,6 +247,49 @@ private slots:
         window.getMonitor().setTotalConsumedLiters(250);
         window.updateDashboard();
         QCOMPARE(label->text(), QString("Consumo Atual = 250 Litros."));
+    }
+
+    /**
+     * @brief Valida se a atualização de consumo é persistida e recuperada corretamente.
+     */
+    void testIntegridadeConsumo()
+    {
+        QString user = "gabriel_teste";
+        double consumoNovo = 125.75;
+
+        // Ação: Salva via BusinessLayer (provando o desacoplamento)
+        bool sucesso = ConsumptionService::syncUserConsumption(user, consumoNovo);
+        QVERIFY(sucesso);
+
+        // Verificação: Busca o valor real no banco
+        double valorRecuperado = DatabaseManager::getUserConsumption(user);
+        QCOMPARE(valorRecuperado, consumoNovo);
+    }
+
+    /**
+     * @brief Testa o fluxo de login real consultando o SQLite.
+     */
+    void testLoginBD()
+    {
+        AuthService auth;
+        // Supõe que o usuário 'admin' com senha '123' existe no seu AquaFavela.db de teste
+        User resultado = auth.authenticate("admin", "admin");
+
+        QVERIFY(resultado.getUsername() == "admin");
+        QVERIFY(resultado.getRole() == (UserRole)3); // Verifica se carregou o cargo corretamente
+    }
+
+
+    /**
+     * @brief Verifica o comportamento do sistema ao buscar um usuário que não existe.
+     */
+    void testUsuarioInexistente()
+    {
+        // Tenta sincronizar consumo para um usuário que não está no banco
+        bool resultado = ConsumptionService::syncUserConsumption("usuario_fantasma", 10.0);
+
+        // O sistema deve retornar false de forma elegante, não dar crash
+        QCOMPARE(resultado, false);
     }
 };
 
