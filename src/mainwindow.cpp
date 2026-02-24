@@ -1,21 +1,34 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "DatabaseManager.h"
+#include "ConsumptionService.h"
+#include "AdminDialog.h"
 #include <QStyle>
+#include <QCloseEvent>
 
 MainWindow::MainWindow(User user, QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), currentUser(user)
 {
     ui->setupUi(this);
 
-    ui->lblUsuario->setText("Olá, " + currentUser.getUsername() + "!");
+    ui->lblUsuario->setText("Olá, " + currentUser.getName() + "!");
 
-    if (currentUser.getRole() == UserRole::Morador) {
+    if (currentUser.getRole() == (UserRole)3) {
+        ui->btnAdminPanel->setVisible(true);
+    } else {
         ui->btnAdminPanel->setVisible(false);
     }
+
+    monitor.setTotalConsumedLiters(currentUser.getTotalConsumedLiters());
 
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::updateDashboard);
     timer->start(2000);
+
+
+    QTimer *saveTimer = new QTimer(this);
+    connect(saveTimer, &QTimer::timeout, this, &MainWindow::saveConsumptionData);
+    saveTimer->start(300000);
 
     updateDashboard();
     monitor.startMonitoring();
@@ -36,6 +49,17 @@ void MainWindow::updateDashboard() {
         ui->lblConsumo->setText(QString::number(flow, 'f', 1) + " L/min");
         ui->lblMeta->setText("Meta = " + QString::number(currentUser.getMaxMonthlyConsumptionGoal()) + "L.");
         ui->lblConsumoTotalAtual->setText("Consumo Atual = " + QString::number(monitor.getTotalConsumedLiters()) + " Litros.");
+        ui->lblMetaMinuto->setText("Meta Maxima = " + QString::number(currentUser.getMaxLitersPerMinuteGoal()) + "L/Min");
+
+        //Atualiza a barra de progresso da Meta de Consumo Maxima
+        double percent = (monitor.getTotalConsumedLiters()/currentUser.getMaxMonthlyConsumptionGoal()) * 100.0;
+        ui->progressMeta->setValue(percent);
+        ui->progressMeta->setFormat(QString::number(percent, 'f', 2) + "%");
+
+        //Atualiza a barra de progresso da Meta de Consumo Maxima por minuto
+        percent = (monitor.getCurrentUsage()/currentUser.getMaxLitersPerMinuteGoal()) * 100.0;
+        ui->progressConsumo->setValue(percent);
+        ui->progressConsumo->setFormat(QString::number(percent, 'f', 2) + "%");
 
     // Lógica da Barra de Status Dinâmica
     if (status == "Normal") {
@@ -87,3 +111,35 @@ void MainWindow::setCurrentUser(const User &newCurrentUser)
 {
     currentUser = newCurrentUser;
 }
+
+
+void MainWindow::saveConsumptionData() {
+    double totalAtual = monitor.getTotalConsumedLiters();
+    QString username = currentUser.getUsername();
+
+    // PROVA DE ACOPLAMENTO FRACO: A UI chama a Lógica, não o Banco.
+    if (ConsumptionService::syncUserConsumption(username, totalAtual)) {
+        qDebug() << "Consumo sincronizado via BusinessLayer.";
+    }
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+    // Salva os dados antes de destruir o objeto
+    saveConsumptionData();
+
+    // Permite que a janela feche normalmente
+    event->accept();
+}
+
+void MainWindow::on_btnAdminPanel_clicked()
+{
+    // Instancia o diálogo passando a MainWindow como pai (this)
+    AdminDialog dialog(this);
+
+    // Define um título para a janela, se ainda não definiu no Designer
+    dialog.setWindowTitle("Painel de Administração - AquaFavela");
+
+    // Abre a janela e trava a MainWindow até o admin fechar
+    dialog.exec();
+}
+
