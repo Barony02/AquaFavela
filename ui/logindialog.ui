@@ -20,7 +20,54 @@
    <string>Dialog</string>
   </property>
   <property name="styleSheet">
-   <string notr="true"/>
+   <string notr="true">/* 1. Fundo da Janela: Usamos tons neutros para destacar os campos de entrada */
+QDialog {
+    background-color: #f0f2f5;
+}
+
+/* 2. Campos de Texto (QLineEdit): Focamos em bordas arredondadas e padding interno */
+QLineEdit {
+    border: 2px solid #ccd0d5;
+    border-radius: 8px; /* Bordas arredondadas para um visual moderno */
+    padding: 10px;
+    background-color: #ffffff;
+    font-size: 14px;
+    color: #1c1e21;
+}
+
+/* Feedback de Foco: Quando o usuário clica na caixa, a cor muda para azul */
+QLineEdit:focus {
+    border: 2px solid #1877f2;
+    background-color: #ffffff;
+}
+
+/* 3. Botão de Login (QPushButton): Verde para indicar ação positiva (conectar/acesso) */
+QPushButton#btnLogin {
+    background-color: #27ae60; /* Verde AquaFavela */
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+/* Efeito Hover: O botão escurece levemente quando o mouse passa por cima */
+QPushButton#btnLogin:hover {
+    background-color: #219150;
+}
+
+/* Efeito Pressed: Visual de clique real */
+QPushButton#btnLogin:pressed {
+    background-color: #1a7440;
+    padding-top: 14px; /* Simula o botão sendo empurrado */
+}
+
+/* 4. Mensagens de Erro: Vermelho vibrante para atenção imediata */
+QLabel#lblError {
+    color: #d63031;
+    font-size: 12px;
+    font-weight: bold;
+}</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
